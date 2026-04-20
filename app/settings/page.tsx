@@ -266,6 +266,30 @@ export default function SettingsPage() {
           </form>
         </section>
 
+        <section className="mt-8">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">
+            Your data
+          </h2>
+          <div className="card mt-2 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold text-gray-900">Export</div>
+                <div className="text-xs text-gray-500">
+                  Download a full JSON copy of your profile, dogs, scans, and
+                  chats.
+                </div>
+              </div>
+              <a
+                href="/api/export"
+                download
+                className="shrink-0 rounded-xl border border-brand/20 bg-white px-3 py-2 text-sm font-semibold text-brand hover:bg-brand/5"
+              >
+                📥 Download JSON
+              </a>
+            </div>
+          </div>
+        </section>
+
         <section className="mt-8 border-t border-black/5 pt-6">
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
@@ -295,36 +319,98 @@ function DogRow({
     age: String(dog.age),
     weight: String(dog.weight),
   });
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+
+  async function createShare() {
+    const res = await fetch(`/api/dogs/${dog.id}/share`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error ?? "Failed to create link.");
+      return;
+    }
+    const url = `${window.location.origin}/share/${data.shareSlug}`;
+    setShareUrl(url);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Share link copied to clipboard.");
+    } catch {
+      toast.success("Share link ready.");
+    }
+  }
+
+  async function revokeShare() {
+    if (!confirm("Revoke the share link? Anyone using it will lose access.")) return;
+    const res = await fetch(`/api/dogs/${dog.id}/share`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Failed to revoke link.");
+      return;
+    }
+    setShareUrl(null);
+    toast.success("Link revoked.");
+  }
 
   if (!editing) {
     return (
-      <li className="card flex items-center gap-3">
-        {dog.photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={dog.photoUrl} alt={dog.name} className="h-12 w-12 rounded-full object-cover" />
-        ) : (
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 font-bold text-brand">
-            {dog.name.charAt(0).toUpperCase()}
+      <li className="card space-y-2">
+        <div className="flex items-center gap-3">
+          {dog.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={dog.photoUrl} alt={dog.name} className="h-12 w-12 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 font-bold text-brand">
+              {dog.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-semibold text-gray-900">{dog.name}</div>
+            <div className="truncate text-xs text-gray-500">
+              {dog.breed} · {dog.age} yrs · {dog.weight} lbs
+            </div>
+          </div>
+          <button
+            onClick={() => setEditing(true)}
+            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/5"
+          >
+            Edit
+          </button>
+          <button
+            onClick={createShare}
+            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+          >
+            Share
+          </button>
+          <button
+            onClick={onDelete}
+            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-severity-red hover:bg-severity-red/5"
+          >
+            Delete
+          </button>
+        </div>
+        {shareUrl && (
+          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-2 text-xs">
+            <input
+              readOnly
+              value={shareUrl}
+              onFocus={(e) => e.currentTarget.select()}
+              className="min-w-0 flex-1 bg-transparent outline-none"
+            />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(shareUrl);
+                toast.success("Copied.");
+              }}
+              className="rounded-lg bg-brand px-2 py-1 font-semibold text-white"
+            >
+              Copy
+            </button>
+            <button
+              onClick={revokeShare}
+              className="rounded-lg px-2 py-1 font-semibold text-severity-red"
+            >
+              Revoke
+            </button>
           </div>
         )}
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold text-gray-900">{dog.name}</div>
-          <div className="truncate text-xs text-gray-500">
-            {dog.breed} · {dog.age} yrs · {dog.weight} lbs
-          </div>
-        </div>
-        <button
-          onClick={() => setEditing(true)}
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/5"
-        >
-          Edit
-        </button>
-        <button
-          onClick={onDelete}
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-severity-red hover:bg-severity-red/5"
-        >
-          Delete
-        </button>
       </li>
     );
   }

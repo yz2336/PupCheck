@@ -1,3 +1,5 @@
+"use client";
+
 import type { ScanDTO } from "@/types";
 import SeverityBadge from "./SeverityBadge";
 
@@ -9,6 +11,10 @@ const URGENCY_LABEL: Record<string, string> = {
 
 export default function ScanResult({ scan }: { scan: ScanDTO }) {
   const { aiResult, imageUrl, scanType } = scan;
+
+  function exportPdf() {
+    window.open(`/scan/${scan.id}/print`, "_blank", "noopener,noreferrer");
+  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm">
@@ -75,10 +81,18 @@ export default function ScanResult({ scan }: { scan: ScanDTO }) {
           </div>
         )}
 
-        <p className="border-t border-black/5 pt-3 text-xs text-gray-400">
-          PupCheck AI is a screening assistant, not a replacement for your
-          veterinarian.
-        </p>
+        <div className="flex items-center justify-between gap-2 border-t border-black/5 pt-3">
+          <p className="text-xs text-gray-400">
+            PupCheck AI is a screening assistant, not a replacement for your
+            veterinarian.
+          </p>
+          <button
+            onClick={exportPdf}
+            className="shrink-0 rounded-lg border border-brand/20 bg-white px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand/5"
+          >
+            📄 Export PDF
+          </button>
+        </div>
       </div>
     </div>
   );

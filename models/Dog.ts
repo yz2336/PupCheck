@@ -8,6 +8,7 @@ export interface IDog {
   age: number;
   weight: number;
   photoUrl?: string;
+  shareSlug?: string;
   createdAt: Date;
 }
 
@@ -18,6 +19,7 @@ const DogSchema = new Schema<IDog>({
   age: { type: Number, required: true, min: 0 },
   weight: { type: Number, required: true, min: 0 },
   photoUrl: { type: String },
+  shareSlug: { type: String, index: true, sparse: true },
   createdAt: { type: Date, default: Date.now },
 });
 

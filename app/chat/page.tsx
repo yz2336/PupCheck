@@ -53,12 +53,18 @@ function ChatInner() {
     const text = input.trim();
     if (!text || !dogId || sending) return;
 
+    const nowIso = new Date().toISOString();
     const userMsg: ChatMessageDTO = {
       role: "user",
       content: text,
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso,
     };
-    setMessages((prev) => [...prev, userMsg]);
+    const placeholder: ChatMessageDTO = {
+      role: "assistant",
+      content: "",
+      timestamp: nowIso,
+    };
+    setMessages((prev) => [...prev, userMsg, placeholder]);
     setInput("");
     setSending(true);
 
@@ -71,19 +77,84 @@ function ChatInner() {
           sessionId,
           message: text,
           scanContextId: messages.length === 0 ? scanContextId : undefined,
+          stream: true,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
         toast.error(data.error ?? "Chat failed.");
-        setMessages((prev) => prev.slice(0, -1));
+        setMessages((prev) => prev.slice(0, -2));
         return;
       }
-      setSessionId(data.sessionId);
-      setMessages(data.messages);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let accumulated = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+
+        const events = buf.split("\n\n");
+        buf = events.pop() ?? "";
+
+        for (const evt of events) {
+          const line = evt.trim();
+          if (!line.startsWith("data:")) continue;
+          const json = line.slice(5).trim();
+          if (!json) continue;
+          try {
+            const payload = JSON.parse(json);
+            if (payload.error) {
+              toast.error(payload.error);
+              setMessages((prev) => prev.slice(0, -2));
+              return;
+            }
+            if (payload.sessionId && !payload.done) {
+              setSessionId(payload.sessionId);
+            }
+            if (typeof payload.delta === "string") {
+              accumulated += payload.delta;
+              setMessages((prev) => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                if (last && last.role === "assistant") {
+                  next[next.length - 1] = {
+                    ...last,
+                    content: accumulated,
+                  };
+                }
+                return next;
+              });
+            }
+            if (payload.done) {
+              if (typeof payload.reply === "string") {
+                setMessages((prev) => {
+                  const next = [...prev];
+                  const last = next[next.length - 1];
+                  if (last && last.role === "assistant") {
+                    next[next.length - 1] = {
+                      ...last,
+                      content: payload.reply,
+                      timestamp: new Date().toISOString(),
+                    };
+                  }
+                  return next;
+                });
+              }
+              if (payload.sessionId) setSessionId(payload.sessionId);
+            }
+          } catch {
+            /* ignore malformed chunk */
+          }
+        }
+      }
     } catch {
       toast.error("Network error. Please try again.");
-      setMessages((prev) => prev.slice(0, -1));
+      setMessages((prev) => prev.slice(0, -2));
     } finally {
       setSending(false);
     }
@@ -144,18 +215,23 @@ function ChatInner() {
             </div>
           ) : (
             <>
-              {messages.map((m, i) => (
-                <ChatMessage key={i} message={m} />
-              ))}
-              {sending && (
-                <div className="flex justify-start">
-                  <div className="rounded-2xl rounded-bl-sm border border-black/5 bg-white px-4 py-2.5 text-sm text-gray-500 shadow-sm">
-                    <span className="inline-flex gap-1">
-                      <Dot /> <Dot delay={0.15} /> <Dot delay={0.3} />
-                    </span>
-                  </div>
-                </div>
-              )}
+              {messages.map((m, i) => {
+                const isLast = i === messages.length - 1;
+                const isEmptyAssistant =
+                  m.role === "assistant" && m.content === "";
+                if (isLast && isEmptyAssistant && sending) {
+                  return (
+                    <div key={i} className="flex justify-start">
+                      <div className="rounded-2xl rounded-bl-sm border border-black/5 bg-white px-4 py-2.5 text-sm text-gray-500 shadow-sm">
+                        <span className="inline-flex gap-1">
+                          <Dot /> <Dot delay={0.15} /> <Dot delay={0.3} />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+                return <ChatMessage key={i} message={m} />;
+              })}
             </>
           )}
         </div>

@@ -5,6 +5,8 @@ import { connectDB } from "@/lib/mongodb";
 import Dog from "@/models/Dog";
 import Scan from "@/models/Scan";
 import ChatSession from "@/models/ChatSession";
+import WellnessEntry from "@/models/WellnessEntry";
+import Reminder from "@/models/Reminder";
 import { uploadImage } from "@/lib/cloudinary";
 
 async function assertOwner(id: string, userId: string) {
@@ -79,6 +81,8 @@ export async function DELETE(
 
     await Scan.deleteMany({ dogId: result.dog._id });
     await ChatSession.deleteMany({ dogId: result.dog._id });
+    await WellnessEntry.deleteMany({ dogId: result.dog._id });
+    await Reminder.deleteMany({ dogId: result.dog._id });
     await result.dog.deleteOne();
 
     return NextResponse.json({ ok: true });

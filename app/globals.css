@@ -6,11 +6,21 @@
   color-scheme: light;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 html,
 body {
   background: #F9F7F4;
   color: #1a1a1a;
   -webkit-font-smoothing: antialiased;
+}
+
+html.dark,
+html.dark body {
+  background: #0f1715;
+  color: #e8e7e4;
 }
 
 body {
@@ -22,21 +32,39 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:cursor-not-allowed disabled:opacity-60;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-brand/20 bg-white px-5 py-3 font-semibold text-brand shadow-sm transition hover:bg-brand/5 focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-brand/20 bg-white px-5 py-3 font-semibold text-brand shadow-sm transition hover:bg-brand/5 focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white/5 dark:text-brand-light dark:hover:bg-white/10;
   }
   .btn-accent {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-60;
   }
   .input {
-    @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20;
+    @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-base shadow-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-white/10 dark:bg-white/5 dark:text-gray-100 dark:placeholder:text-gray-500;
   }
   .card {
-    @apply rounded-2xl border border-black/5 bg-white p-5 shadow-sm;
+    @apply rounded-2xl border border-black/5 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5;
   }
   .label {
-    @apply block text-sm font-semibold text-gray-700;
+    @apply block text-sm font-semibold text-gray-700 dark:text-gray-200;
   }
 }
+
+/* Soften common text colors in dark mode so page-level text doesn't need per-line edits */
+html.dark .text-gray-900 { color: #f5f5f4; }
+html.dark .text-gray-800 { color: #e5e5e2; }
+html.dark .text-gray-700 { color: #d3d3cf; }
+html.dark .text-gray-600 { color: #b3b3ad; }
+html.dark .text-gray-500 { color: #8f8f89; }
+html.dark .text-gray-400 { color: #6d6d68; }
+html.dark .bg-white { background-color: rgba(255, 255, 255, 0.05); }
+html.dark .bg-gray-50 { background-color: rgba(255, 255, 255, 0.03); }
+html.dark .bg-gray-100 { background-color: rgba(255, 255, 255, 0.06); }
+html.dark .bg-gray-200 { background-color: rgba(255, 255, 255, 0.08); }
+html.dark .bg-cream { background-color: #141c1a; }
+html.dark .border-gray-200 { border-color: rgba(255, 255, 255, 0.1); }
+html.dark .border-gray-300 { border-color: rgba(255, 255, 255, 0.14); }
+html.dark .border-black\/5 { border-color: rgba(255, 255, 255, 0.08); }
+html.dark .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.08); }
+html.dark .hover\:bg-gray-50:hover { background-color: rgba(255, 255, 255, 0.06); }
 
 /* Scrollbar for chat */
 .chat-scroll::-webkit-scrollbar {
@@ -45,4 +73,7 @@ body {
 .chat-scroll::-webkit-scrollbar-thumb {
   background: #d9d5ce;
   border-radius: 999px;
+}
+html.dark .chat-scroll::-webkit-scrollbar-thumb {
+  background: #3a413f;
 }

@@ -8,7 +8,7 @@ import DogSelector from "@/components/DogSelector";
 import DogProfileCard from "@/components/DogProfileCard";
 import SeverityBadge from "@/components/SeverityBadge";
 import HealthChart from "@/components/HealthChart";
-import type { DogDTO, ScanDTO } from "@/types";
+import type { DogDTO, ReminderDTO, ScanDTO } from "@/types";
 
 const TYPE_EMOJI: Record<string, string> = {
   poop: "💩",
@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [dogs, setDogs] = useState<DogDTO[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scans, setScans] = useState<ScanDTO[]>([]);
+  const [reminders, setReminders] = useState<ReminderDTO[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +48,11 @@ export default function DashboardPage() {
       .then((data: ScanDTO[]) => {
         if (Array.isArray(data)) setScans(data);
       });
+    fetch(`/api/reminders?dogId=${selectedId}&upcoming=1`)
+      .then((r) => r.json())
+      .then((data: ReminderDTO[]) => {
+        if (Array.isArray(data)) setReminders(data);
+      });
   }, [selectedId]);
 
   const selected = useMemo(
@@ -54,6 +60,18 @@ export default function DashboardPage() {
     [dogs, selectedId]
   );
   const recent = scans.slice(0, 5);
+
+  const summary30 = useMemo(() => {
+    const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const counts = { green: 0, yellow: 0, red: 0 };
+    for (const s of scans) {
+      if (new Date(s.createdAt).getTime() >= since) {
+        const k = s.aiResult.severity as "green" | "yellow" | "red";
+        if (k in counts) counts[k] += 1;
+      }
+    }
+    return counts;
+  }, [scans]);
 
   return (
     <>
@@ -110,14 +128,127 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </Link>
+                <Link
+                  href="/wellness"
+                  className="card flex flex-col items-start justify-between gap-3 transition hover:border-brand/30 hover:shadow-md"
+                >
+                  <div className="text-3xl">📔</div>
+                  <div>
+                    <div className="font-bold text-gray-900">Wellness Log</div>
+                    <div className="text-xs text-gray-500">
+                      Mood, appetite, weight
+                    </div>
+                  </div>
+                </Link>
+                <Link
+                  href="/reminders"
+                  className="card flex flex-col items-start justify-between gap-3 transition hover:border-brand/30 hover:shadow-md"
+                >
+                  <div className="text-3xl">🔔</div>
+                  <div>
+                    <div className="font-bold text-gray-900">Reminders</div>
+                    <div className="text-xs text-gray-500">
+                      Vaccines, flea/tick, weigh-ins
+                    </div>
+                  </div>
+                </Link>
               </div>
             </div>
+
+            {reminders.length > 0 && (
+              <section className="mt-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">
+                    Upcoming
+                  </h2>
+                  <Link
+                    href="/reminders"
+                    className="text-xs font-semibold text-brand hover:underline"
+                  >
+                    Manage →
+                  </Link>
+                </div>
+                <ul className="space-y-2">
+                  {reminders.slice(0, 3).map((r) => {
+                    const due = new Date(r.dueDate);
+                    const days = Math.round(
+                      (due.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                    );
+                    const statusCls =
+                      days < 0
+                        ? "text-severity-red"
+                        : days <= 7
+                        ? "text-severity-yellow"
+                        : "text-gray-500";
+                    const statusLabel =
+                      days < 0
+                        ? `${Math.abs(days)}d overdue`
+                        : days === 0
+                        ? "Today"
+                        : `in ${days}d`;
+                    return (
+                      <li
+                        key={r.id}
+                        className="card flex items-center gap-3 p-3"
+                      >
+                        <span className="text-xl">🔔</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold text-gray-900">
+                            {r.title}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {due.toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </div>
+                        </div>
+                        <span
+                          className={`text-xs font-semibold ${statusCls}`}
+                        >
+                          {statusLabel}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+
+            <section className="mt-6">
+              <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-gray-500">
+                Last 30 days
+              </h2>
+              <div className="grid grid-cols-3 gap-2">
+                <SummaryTile
+                  count={summary30.green}
+                  label="Healthy"
+                  emoji="✅"
+                  color="green"
+                />
+                <SummaryTile
+                  count={summary30.yellow}
+                  label="Monitor"
+                  emoji="⚠️"
+                  color="yellow"
+                />
+                <SummaryTile
+                  count={summary30.red}
+                  label="Urgent"
+                  emoji="🚨"
+                  color="red"
+                />
+              </div>
+            </section>
 
             <section className="mt-6">
               <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-gray-500">
                 Health trend
               </h2>
-              <HealthChart scans={scans} />
+              <HealthChart
+                scans={scans}
+                onScanClick={(id) => router.push(`/history?scanId=${id}`)}
+              />
             </section>
 
             <section className="mt-6">
@@ -177,6 +308,42 @@ export default function DashboardPage() {
         )}
       </main>
     </>
+  );
+}
+
+function SummaryTile({
+  count,
+  label,
+  emoji,
+  color,
+}: {
+  count: number;
+  label: string;
+  emoji: string;
+  color: "green" | "yellow" | "red";
+}) {
+  const ring =
+    color === "green"
+      ? "border-severity-green/30 bg-severity-green/5"
+      : color === "yellow"
+      ? "border-severity-yellow/40 bg-severity-yellow/5"
+      : "border-severity-red/30 bg-severity-red/5";
+  const text =
+    color === "green"
+      ? "text-severity-green"
+      : color === "yellow"
+      ? "text-yellow-700"
+      : "text-severity-red";
+  return (
+    <div className={`rounded-2xl border p-3 ${ring}`}>
+      <div className="flex items-center justify-between">
+        <span className="text-xl">{emoji}</span>
+        <span className={`text-2xl font-bold ${text}`}>{count}</span>
+      </div>
+      <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
+        {label}
+      </div>
+    </div>
   );
 }
 

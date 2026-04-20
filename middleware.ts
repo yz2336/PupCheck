@@ -8,5 +8,8 @@ export const config = {
     "/history/:path*",
     "/settings/:path*",
     "/onboarding/:path*",
+    "/compare/:path*",
+    "/wellness/:path*",
+    "/reminders/:path*",
   ],
 };
